@@ -10,7 +10,8 @@ import { dashboardDefinition, type DashboardChatData } from './dashboard'
 import type { DashboardEntity, DashboardSnapshot } from '../dashboard'
 
 /** Required services: the conversation-node registry and the slots service. */
-export const inject = ['conversationEvents', 'slots']
+// 0.2.x 适配：conversationEvents 服务在 dsh 0.2.1-rc.2 已移除，仅注入 slots
+export const inject = ['slots']
 
 // ---------------------------------------------------------------------------
 // Theme (matches the DSH Web dark surface)
@@ -180,7 +181,10 @@ function DashboardView(props: { node: { data: DashboardChatData } }) {
 // Client plugin body
 // ---------------------------------------------------------------------------
 export function apply(ctx: ClientContext & Context): void {
-  ctx.conversationEvents.register(dashboardDefinition)
+  // 0.2.x 适配：conversationEvents 已移除，防御式注册（存在才注册）
+  if (ctx.conversationEvents && typeof ctx.conversationEvents.register === 'function') {
+    ctx.conversationEvents.register(dashboardDefinition)
+  }
   ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({
     name: 'conversation.chat.node',
     key: 'smarthome-dashboard',

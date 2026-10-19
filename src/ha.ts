@@ -102,7 +102,13 @@ export class HomeAssistantClient {
           res.status,
         )
       }
-      return (await res.json()) as T
+      // 0.2.x 适配：HA 部分端点返回纯文本，JSON.parse 失败时回退原文本
+      const body = await res.text()
+      try {
+        return JSON.parse(body) as T
+      } catch {
+        return body as T
+      }
     } catch (err) {
       if (err instanceof HomeAssistantError) throw err
       if (err instanceof Error && err.name === 'AbortError') {

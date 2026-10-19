@@ -61,7 +61,12 @@ export function registerTools(
     },
     async execute() {
       const message = await client.health()
-      if (typeof message !== 'string' || !message.includes('API running')) {
+      // 0.2.x 适配：HA health 返回可能是 {message: '...'} 对象而非字符串
+      const messageText =
+        typeof message === 'string'
+          ? message
+          : (message as { message?: string } | null)?.message ?? JSON.stringify(message)
+      if (!messageText.includes('API running')) {
         throw new Error(`Unexpected Home Assistant response: ${JSON.stringify(message)}`)
       }
       const configInfo = await client.getConfig()
