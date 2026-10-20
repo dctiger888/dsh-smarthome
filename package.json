@@ -21,11 +21,11 @@
     "README.zh.md"
   ],
   "scripts": {
-    "build": "tsdown && tsdown --config tsdown.client.config.ts && tsdown --config tsdown.client.dts.config.ts && node -e \"const fs=require('node:fs');fs.renameSync('lib/client.d.mts','lib/client.d.ts');fs.rmSync('lib/client.mjs',{force:true})\"",
+    "build": "tsdown && tsdown --config tsdown.client.config.ts && tsdown --config tsdown.client.dts.config.ts && node -e \"const fs=require('node:fs');fs.renameSync('lib/client.d.mts','lib/client.d.ts');fs.rmSync('lib/client.mjs',{force:true})\" && node -e \"const fs=require('node:fs');['lib/client.js'].forEach(f=>{if(fs.existsSync(f)){const s=fs.readFileSync(f,'utf8').replace(/\\n\\/\\/# sourceMappingURL=[^\\n]*$/,'\\n');if(s!==fs.readFileSync(f,'utf8'))fs.writeFileSync(f,s)}})\"",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "demo:ha": "node scripts/demo-ha.mjs",
-    "prepare": "tsdown --config tsdown.prepare.config.ts && tsdown --config tsdown.client.config.ts && tsdown --config tsdown.client.dts.config.ts && node -e \"const fs=require('node:fs');fs.renameSync('lib/client.d.mts','lib/client.d.ts');fs.rmSync('lib/client.mjs',{force:true})\""
+    "prepare": "tsdown --config tsdown.prepare.config.ts && tsdown --config tsdown.client.config.ts && tsdown --config tsdown.client.dts.config.ts && node -e \"const fs=require('node:fs');fs.renameSync('lib/client.d.mts','lib/client.d.ts');fs.rmSync('lib/client.mjs',{force:true})\" && node -e \"const fs=require('node:fs');['lib/client.js'].forEach(f=>{if(fs.existsSync(f)){const s=fs.readFileSync(f,'utf8').replace(/\\n\\/\\/# sourceMappingURL=[^\\n]*$/,'\\n');if(s!==fs.readFileSync(f,'utf8'))fs.writeFileSync(f,s)}})\""
   },
   "keywords": [
     "dsh-plugin",
