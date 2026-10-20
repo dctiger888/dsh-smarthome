@@ -7,7 +7,7 @@ import { createElement, type ReactNode } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type { DashboardChatData } from './dashboard'
-import type { DashboardEntity, DashboardSnapshot } from '../dashboard'
+import { DASHBOARD_META_KIND, type DashboardEntity, type DashboardSnapshot } from '../dashboard'
 
 /** Required services: the conversation-node registry and the slots service. */
 // 0.2.x 适配：conversationEvents 服务在 dsh 0.2.1-rc.2 已移除，仅注入 slots
@@ -112,14 +112,28 @@ function EntityRow({ entity }: { entity: DashboardEntity }) {
   )
 }
 
+/** Type guard: the tool-result meta carries a full dashboard snapshot. */
+function isDashboardSnapshot(value: unknown): value is DashboardSnapshot {
+  return typeof value === 'object' && value !== null
+    && (value as { kind?: unknown }).kind === DASHBOARD_META_KIND
+}
+
 /**
- * Renders the dashboard card. The prop type is the structural slice of the
- * keyed Chat-node seat (`node.data`), which satisfies both the view contract
- * and the slot component signature without pulling the locale-bound props.
+ * Renders the dashboard card inside the `ha_dashboard` tool row.
+ *
+ * 0.2.1 适配：工具卡片走 keyed 槽 `tool.call.toolview`（key = 工具名），
+ * 组件收到的 owner 是 ToolCall 的展开 `{ phase, block?, toolName, callId, cwd, ... }`；
+ * 快照由 host 侧 `presentationMeta` 投影到 `block.meta`（不再走 conversationEvents
+ * 的 chat 节点，那条服务在 0.2.1 已无提供者）。
  */
-function DashboardView(props: { node: { data: DashboardChatData } }) {
-  const { node } = props
-  const snapshot: DashboardSnapshot = node.data.snapshot
+function DashboardView(props: { block?: { meta?: unknown } }) {
+  const meta = props.block?.meta
+  if (!isDashboardSnapshot(meta)) {
+    return createElement('div', {
+      style: { color: COLORS.muted, fontSize: 12, padding: '4px 2px' },
+    }, '🏠 家庭仪表盘加载中…')
+  }
+  const snapshot: DashboardSnapshot = meta
   const groups = groupEntities(snapshot.entities)
   const onCount = snapshot.entities.filter(e => e.state === 'on').length
   const recentEvents = snapshot.events.slice(-5).reverse()
@@ -181,12 +195,13 @@ function DashboardView(props: { node: { data: DashboardChatData } }) {
 // Client plugin body
 // ---------------------------------------------------------------------------
 export function apply(ctx: ClientContext & Context): void {
-  // 0.2.x 适配：conversationEvents 服务在 0.2.1-rc.2 无提供者；cordis 对未 inject 的
-  // 服务属性读取会直接抛错（不是返回 undefined，typeof 守卫救不了），故整段移除。
-  ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({
-    name: 'conversation.chat.node',
-    key: 'smarthome-dashboard',
-  }, DashboardView))
+  // 0.2.1 适配：工具卡片走 keyed 槽 `tool.call.toolview`，key = 工具名；
+  // 数据来自 host 侧 `presentationMeta` 投影到 block.meta。
+  // （conversationEvents / conversation.chat.node 那条路在 0.2.1 已无提供者。）
+  ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({
+    name: 'tool.call.toolview',
+    key: 'ha_dashboard',
+  }, DashboardView as never))
 }
 
 // Keep the type referenced so the augmentation stays part of the program.
