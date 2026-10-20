@@ -6,7 +6,7 @@
 import { createElement, type ReactNode } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
-import { dashboardDefinition, type DashboardChatData } from './dashboard'
+import type { DashboardChatData } from './dashboard'
 import type { DashboardEntity, DashboardSnapshot } from '../dashboard'
 
 /** Required services: the conversation-node registry and the slots service. */
@@ -181,10 +181,8 @@ function DashboardView(props: { node: { data: DashboardChatData } }) {
 // Client plugin body
 // ---------------------------------------------------------------------------
 export function apply(ctx: ClientContext & Context): void {
-  // 0.2.x 适配：conversationEvents 已移除，防御式注册（存在才注册）
-  if (ctx.conversationEvents && typeof ctx.conversationEvents.register === 'function') {
-    ctx.conversationEvents.register(dashboardDefinition)
-  }
+  // 0.2.x 适配：conversationEvents 服务在 0.2.1-rc.2 无提供者；cordis 对未 inject 的
+  // 服务属性读取会直接抛错（不是返回 undefined，typeof 守卫救不了），故整段移除。
   ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({
     name: 'conversation.chat.node',
     key: 'smarthome-dashboard',
